@@ -105,12 +105,6 @@ class HealthPlugin(private var channel: MethodChannel? = null) :
         context = flutterPluginBinding.applicationContext
         threadPoolExecutor = Executors.newFixedThreadPool(4)
         checkAvailability()
-        if (healthConnectAvailable) {
-            healthConnectClient =
-                HealthConnectClient.getOrCreate(
-                    flutterPluginBinding.applicationContext
-                )
-        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
