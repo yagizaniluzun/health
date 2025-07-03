@@ -307,6 +307,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         if #available(iOS 13.0, *) {
             let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
             let status = healthStore.authorizationStatus(for: stepType)
+            print("Authorization status: \(status.rawValue)") // DEBUG log
             result(status == .sharingAuthorized)
         } else {
             result(false)
