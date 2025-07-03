@@ -303,43 +303,14 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         result(HKHealthStore.isHealthDataAvailable())
     }
     
-    func hasPermissions(call: FlutterMethodCall, result: @escaping FlutterResult) throws {
-        let arguments = call.arguments as? NSDictionary
-        guard var types = arguments?["types"] as? [String],
-              var permissions = arguments?["permissions"] as? [Int],
-              types.count == permissions.count
-        else {
-            throw PluginError(message: "Invalid Arguments!")
+    func hasPermissions(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if #available(iOS 13.0, *) {
+            let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+            let status = healthStore.authorizationStatus(for: stepType)
+            result(status == .sharingAuthorized)
+        } else {
+            result(false)
         }
-        
-        if let nutritionIndex = types.firstIndex(of: NUTRITION) {
-            types.remove(at: nutritionIndex)
-            let nutritionPermission = permissions[nutritionIndex]
-            permissions.remove(at: nutritionIndex)
-            
-            for nutritionType in nutritionList {
-                types.append(nutritionType)
-                permissions.append(nutritionPermission)
-            }
-        }
-        
-        for (index, type) in types.enumerated() {
-            let sampleType = dataTypeLookUp(key: type)
-            let success = hasPermission(type: sampleType, access: permissions[index])
-            if success == nil || success == false {
-                result(success)
-                return
-            }
-            if let characteristicType = characteristicsTypesDict[type] {
-                let characteristicSuccess = hasPermission(type: characteristicType, access: permissions[index])
-                if (characteristicSuccess == nil || characteristicSuccess == false) {
-                    result(characteristicSuccess)
-                    return
-                }
-            }
-        }
-        
-        result(false)
     }
     
     func hasPermission(type: HKObjectType, access: Int) -> Bool? {
