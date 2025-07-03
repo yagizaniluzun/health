@@ -348,7 +348,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             let status = healthStore.authorizationStatus(for: type)
             switch access {
             case 0:  // READ
-                return nil
+                return (status == HKAuthorizationStatus.sharingAuthorized)
             case 1:  // WRITE
                 return (status == HKAuthorizationStatus.sharingAuthorized)
             default:  // READ_WRITE
