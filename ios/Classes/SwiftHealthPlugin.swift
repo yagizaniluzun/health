@@ -321,26 +321,33 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                                           options: .cumulativeSum) { _, statistics, error in
                 DispatchQueue.main.async {
                     print("=== STEP COUNT PERMISSION DEBUG ===")
-                    if let error = error {
+
+                    if let error = error as? NSError {
                         print("HealthKit access error: \(error.localizedDescription)")
-                        result(false) // ❌ Erişim hatası: izin verilmemiş olabilir
+
+                        // ✅ Bu hata sadece veri yoksa ama erişim varsa döner
+                        if error.localizedDescription.contains("No data available for the specified predicate") {
+                            print("No data available, but access likely granted")
+                            result(true) // Erişim var ama veri yok
+                            return
+                        }
+
+                        result(false) // Diğer hatalar → erişim yok
                         return
                     }
 
                     if statistics != nil {
-                        print("HealthKit statistics received successfully")
-                        result(true) // ✅ Veri sorgulanabildi: erişim var (veri olsa da olmasa da)
+                        result(true)
                     } else {
-                        print("Statistics is nil but no error")
-                        result(true) // ✅ Hata yoksa, istatistik olmaması sorun değil
+                        result(false)
                     }
+
                     print("==================================")
                 }
             }
 
             healthStore.execute(query)
         } else {
-            print("iOS version not supported for HealthKit")
             result(false)
         }
     }
