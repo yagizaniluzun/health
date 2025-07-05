@@ -306,6 +306,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     func hasPermissions(call: FlutterMethodCall, result: @escaping FlutterResult) {
         if #available(iOS 13.0, *) {
             let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+            
+            // Önce authorizationStatus kontrol et
             let status = healthStore.authorizationStatus(for: stepType)
             
             print("=== STEP COUNT PERMISSION DEBUG ===")
@@ -313,9 +315,23 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             print("Authorization status: \(status)")
             print("Is sharing authorized: \(status == .sharingAuthorized)")
             print("Health data available: \(HKHealthStore.isHealthDataAvailable())")
-            print("==================================")
             
-            result(status == .sharingAuthorized)
+            // getRequestStatusForAuthorization kullan
+            healthStore.getRequestStatusForAuthorization(toShare: [], read: [stepType]) { requestStatus, error in
+                DispatchQueue.main.async {
+                    print("Request status: \(requestStatus.rawValue)")
+                    if let error = error {
+                        print("Request status error: \(error.localizedDescription)")
+                    }
+                    
+                    // Eğer requestStatus .unnecessary ise izin var demektir
+                    let hasPermission = (requestStatus == .unnecessary)
+                    print("Has permission (getRequestStatus): \(hasPermission)")
+                    print("==================================")
+                    
+                    result(hasPermission)
+                }
+            }
         } else {
             print("iOS version not supported for HealthKit")
             result(false)
