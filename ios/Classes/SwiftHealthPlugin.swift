@@ -305,33 +305,40 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     func hasPermissions(call: FlutterMethodCall, result: @escaping FlutterResult) {
         if #available(iOS 13.0, *) {
-            let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
-            
-            // Önce authorizationStatus kontrol et
-            let status = healthStore.authorizationStatus(for: stepType)
-            
-            print("=== STEP COUNT PERMISSION DEBUG ===")
-            print("Authorization status raw value: \(status.rawValue)")
-            print("Authorization status: \(status)")
-            print("Is sharing authorized: \(status == .sharingAuthorized)")
-            print("Health data available: \(HKHealthStore.isHealthDataAvailable())")
-            
-            // getRequestStatusForAuthorization kullan
-            healthStore.getRequestStatusForAuthorization(toShare: [], read: [stepType]) { requestStatus, error in
+            let healthStore = HKHealthStore()
+
+            guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
+                result(false)
+                return
+            }
+
+            let startDate = Calendar.current.startOfDay(for: Date())
+            let endDate = Date()
+            let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [])
+
+            let query = HKStatisticsQuery(quantityType: stepType,
+                                          quantitySamplePredicate: predicate,
+                                          options: .cumulativeSum) { _, statistics, error in
                 DispatchQueue.main.async {
-                    print("Request status: \(requestStatus.rawValue)")
+                    print("=== STEP COUNT PERMISSION DEBUG ===")
                     if let error = error {
-                        print("Request status error: \(error.localizedDescription)")
+                        print("HealthKit access error: \(error.localizedDescription)")
+                        result(false) // ❌ Erişim hatası: izin verilmemiş olabilir
+                        return
                     }
-                    
-                    // Eğer requestStatus .unnecessary ise izin var demektir
-                    let hasPermission = (requestStatus == .unnecessary)
-                    print("Has permission (getRequestStatus): \(hasPermission)")
+
+                    if statistics != nil {
+                        print("HealthKit statistics received successfully")
+                        result(true) // ✅ Veri sorgulanabildi: erişim var (veri olsa da olmasa da)
+                    } else {
+                        print("Statistics is nil but no error")
+                        result(true) // ✅ Hata yoksa, istatistik olmaması sorun değil
+                    }
                     print("==================================")
-                    
-                    result(hasPermission)
                 }
             }
+
+            healthStore.execute(query)
         } else {
             print("iOS version not supported for HealthKit")
             result(false)
